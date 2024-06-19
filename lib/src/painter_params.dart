@@ -1,7 +1,5 @@
 import 'dart:ui';
 
-import 'package:flutter/widgets.dart';
-
 import 'candle_data.dart';
 import 'chart_style.dart';
 
@@ -37,11 +35,11 @@ class PainterParams {
   final List<double?>? leadingTrends;
   final List<double?>? trailingTrends;
 
-  double get chartWidth => // width without price labels
-      size.width - style.priceLabelWidth;
+  // width without price labels
+  double get chartWidth => size.width - style.priceLabelWidth;
 
-  double get chartHeight => // height without time labels
-      size.height - style.timeLabelHeight;
+  // height without time labels
+  double get chartHeight => size.height - style.timeLabelHeight;
 
   double get volumeHeight => chartHeight * style.volumeHeightFactor;
 
@@ -57,21 +55,12 @@ class PainterParams {
       priceHeight * (maxPrice - y) / (maxPrice - minPrice);
 
   double fitVolume(double y) {
-    const gap = 12; // the gap between price bars and volume bars
-    const baseAmount = 2; // display at least "something" for the lowest volume
+    // the gap between price bars and volume bars
+    const gap = 12;
+    // display at least "something" for the lowest volume
+    const baseAmount = 2;
 
     if (maxVol == minVol) {
-      // Apparently max and min values (in the current visible range, at least)
-      // are the same. It's likely they passed in a bunch of zeroes, because
-      // they don't have real volume data or don't want to draw volumes.
-      assert(() {
-        // if (style.volumeHeightFactor != 0) {
-        //   debugPrint('If you do not want to show volumes, '
-        //       'make sure to set `volumeHeightFactor` (ChartStyle) to zero.');
-        // }
-        return true;
-      }());
-
       // Since they are equal, we just draw all volume bars as half height.
       return priceHeight + volumeHeight / 2;
     }
@@ -79,26 +68,6 @@ class PainterParams {
     final volGridSize = (volumeHeight - baseAmount - gap) / (maxVol - minVol);
     final vol = (y - minVol) * volGridSize;
     return volumeHeight - vol + priceHeight - baseAmount;
-  }
-
-  static PainterParams lerp(PainterParams a, PainterParams b, double t) {
-    double lerpField(double Function(PainterParams p) getField) =>
-        lerpDouble(getField(a), getField(b), t)!;
-    return PainterParams(
-      candles: b.candles,
-      style: b.style,
-      size: b.size,
-      candleWidth: b.candleWidth,
-      startOffset: b.startOffset,
-      maxPrice: lerpField((p) => p.maxPrice),
-      minPrice: lerpField((p) => p.minPrice),
-      maxVol: lerpField((p) => p.maxVol),
-      minVol: lerpField((p) => p.minVol),
-      xShift: b.xShift,
-      tapPosition: b.tapPosition,
-      leadingTrends: b.leadingTrends,
-      trailingTrends: b.trailingTrends,
-    );
   }
 
   bool shouldRepaint(PainterParams other) {
@@ -135,14 +104,4 @@ class PainterParams {
 
     return false;
   }
-}
-
-class PainterParamsTween extends Tween<PainterParams> {
-  PainterParamsTween({
-    PainterParams? begin,
-    required PainterParams end,
-  }) : super(begin: begin, end: end);
-
-  @override
-  PainterParams lerp(double t) => PainterParams.lerp(begin ?? end!, end!, t);
 }

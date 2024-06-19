@@ -118,27 +118,26 @@ class ChartPainter extends CustomPainter {
     final close = candle.close;
     final high = candle.high;
     final low = candle.low;
-    if (open != null && close != null) {
-      final color = open > close
-          ? params.style.priceLossColor
-          : params.style.priceGainColor;
-      canvas.drawLine(
+
+    final color = open > close
+        ? params.style.priceLossColor
+        : params.style.priceGainColor;
+    canvas
+      ..drawLine(
         Offset(x, params.fitPrice(open)),
         Offset(x, params.fitPrice(close)),
         Paint()
           ..strokeWidth = thickWidth
           ..color = color,
+      )
+      ..drawLine(
+        Offset(x, params.fitPrice(high)),
+        Offset(x, params.fitPrice(low)),
+        Paint()
+          ..strokeWidth = thinWidth
+          ..color = color,
       );
-      if (high != null && low != null) {
-        canvas.drawLine(
-          Offset(x, params.fitPrice(high)),
-          Offset(x, params.fitPrice(low)),
-          Paint()
-            ..strokeWidth = thinWidth
-            ..color = color,
-        );
-      }
-    }
+
     // Draw volume bar
     final volume = candle.volume;
     if (volume != null) {

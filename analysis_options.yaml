@@ -20,6 +20,5 @@ linter:
     avoid_bool_literals_in_conditional_expressions: false
     # 1行の文字数は80文字まで
     lines_longer_than_80_chars: false
-
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

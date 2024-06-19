@@ -10,82 +10,25 @@ import 'chart_style.dart';
 import 'painter_params.dart';
 
 class InteractiveChart extends StatefulWidget {
-  const InteractiveChart({
-    Key? key,
-    required this.candles,
-    this.initialVisibleCandleCount = 90,
-    ChartStyle? style,
-    this.timeLabel,
-    this.priceLabel,
-    this.overlayInfo,
-    this.onTap,
-    this.onCandleResize,
-  })  : style = style ?? const ChartStyle(),
-        assert(
-          candles.length >= 3,
-          'InteractiveChart requires 3 or more CandleData',
-        ),
-        assert(
-          initialVisibleCandleCount >= 3,
-          'initialVisibleCandleCount must be more 3 or more',
-        ),
-        super(key: key);
+  const InteractiveChart({Key? key, required this.candles}) : super(key: key);
 
   /// The full list of [CandleData] to be used for this chart.
   ///
   /// It needs to have at least 3 data points. If data is sufficiently large,
   /// the chart will default to display the most recent 90 data points when
-  /// first opened (configurable with [initialVisibleCandleCount] parameter),
+  /// first opened (configurable with initialVisibleCandleCount parameter),
   /// and allow users to freely zoom and pan however they like.
   final List<CandleData> candles;
-
-  /// The default number of data points to be displayed when the chart is first
-  /// opened. The default value is 90. If [CandleData] does not have enough data
-  /// points, the chart will display all of them.
-  final int initialVisibleCandleCount;
-
-  /// If non-null, the style to use for this chart.
-  final ChartStyle style;
-
-  /// How the date/time label at the bottom are displayed.
-  ///
-  /// If null, it defaults to use yyyy-mm format if more than 20 data points
-  /// are visible in the current chart window, otherwise it uses mm-dd format.
-  final TimeLabelGetter? timeLabel;
-
-  /// How the price labels on the right are displayed.
-  ///
-  /// If null, it defaults to show 2 digits after the decimal point.
-  final PriceLabelGetter? priceLabel;
-
-  /// How the overlay info are displayed, when user touches the chart.
-  ///
-  /// If null, it defaults to display `date`, `open`, `high`, `low`, `close`
-  /// and `volume` fields when user selects a data point in the chart.
-  ///
-  /// To customize it, pass in a function that returns a Map<String,String>:
-  /// ```dart
-  /// return {
-  ///   "Date": "Customized date string goes here",
-  ///   "Open": candle.open?.toStringAsFixed(2) ?? "-",
-  ///   "Close": candle.close?.toStringAsFixed(2) ?? "-",
-  /// };
-  /// ```
-  final OverlayInfoGetter? overlayInfo;
-
-  /// An optional event, fired when the user clicks on a candlestick.
-  final ValueChanged<CandleData>? onTap;
-
-  /// An optional event, fired when user zooms in/out.
-  ///
-  /// This provides the width of a candlestick at the current zoom level.
-  final ValueChanged<double>? onCandleResize;
 
   @override
   InteractiveChartState createState() => InteractiveChartState();
 }
 
 class InteractiveChartState extends State<InteractiveChart> {
+  final style = const ChartStyle();
+
+  final initialVisibleCandleCount = 90;
+
   // The width of an individual bar in the chart.
   late double _candleWidth;
 
@@ -102,14 +45,13 @@ class InteractiveChartState extends State<InteractiveChart> {
   late double _prevCandleWidth;
   late double _prevStartOffset;
   late Offset _initialFocalPoint;
-  PainterParams? _prevParams; // used in onTapUp event
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final size = constraints.biggest;
-        final w = size.width - widget.style.priceLabelWidth;
+        final w = size.width - style.priceLabelWidth;
         _handleResize(w);
 
         // Find the visible data range
@@ -137,31 +79,12 @@ class InteractiveChartState extends State<InteractiveChart> {
         final fractionCandle = _startOffset - start * _candleWidth;
         final xShift = halfCandle - fractionCandle;
 
-        // Calculate min and max among the visible data
-        double? highest(CandleData c) {
-          if (c.high != null) {
-            return c.high;
-          }
-          if (c.open != null && c.close != null) {
-            return max(c.open!, c.close!);
-          }
-          return c.open ?? c.close;
-        }
-
-        double? lowest(CandleData c) {
-          if (c.low != null) {
-            return c.low;
-          }
-          if (c.open != null && c.close != null) {
-            return min(c.open!, c.close!);
-          }
-          return c.open ?? c.close;
-        }
-
         final maxPrice =
-            candlesInRange.map(highest).whereType<double>().reduce(max);
+            candlesInRange.map((c) => c.high).whereType<double>().reduce(max);
+
         final minPrice =
-            candlesInRange.map(lowest).whereType<double>().reduce(min);
+            candlesInRange.map((c) => c.low).whereType<double>().reduce(min);
+
         final maxVol = candlesInRange
             .map((c) => c.volume)
             .whereType<double>()
@@ -171,45 +94,9 @@ class InteractiveChartState extends State<InteractiveChart> {
             .whereType<double>()
             .fold(double.infinity, min);
 
-        // final child = TweenAnimationBuilder(
-        //   tween: PainterParamsTween(
-        //     end: PainterParams(
-        //       candles: candlesInRange,
-        //       style: widget.style,
-        //       size: size,
-        //       candleWidth: _candleWidth,
-        //       startOffset: _startOffset,
-        //       maxPrice: maxPrice,
-        //       minPrice: minPrice,
-        //       maxVol: maxVol,
-        //       minVol: minVol,
-        //       xShift: xShift,
-        //       tapPosition: _tapPosition,
-        //       leadingTrends: leadingTrends,
-        //       trailingTrends: trailingTrends,
-        //     ),
-        //   ),
-        //   duration: Duration(milliseconds: 300),
-        //   curve: Curves.easeOut,
-        //   builder: (_, PainterParams params, __) {
-        //     _prevParams = params;
-        //     return RepaintBoundary(
-        //       child: CustomPaint(
-        //         size: size,
-        //         painter: ChartPainter(
-        //           params: params,
-        //           getTimeLabel: widget.timeLabel ?? defaultTimeLabel,
-        //           getPriceLabel: widget.priceLabel ?? defaultPriceLabel,
-        //           getOverlayInfo: widget.overlayInfo ?? defaultOverlayInfo,
-        //         ),
-        //       ),
-        //     );
-        //   },
-        // );
-
         final params = PainterParams(
           candles: candlesInRange,
-          style: widget.style,
+          style: style,
           size: size,
           candleWidth: _candleWidth,
           startOffset: _startOffset,
@@ -244,10 +131,6 @@ class InteractiveChartState extends State<InteractiveChart> {
             }),
             onTapCancel: () => setState(() => _tapPosition = null),
             onTapUp: (_) {
-              // Fire callback event and reset _tapPosition
-              if (widget.onTap != null) {
-                _fireOnTapEvent();
-              }
               setState(() => _tapPosition = null);
             },
             // Pan and zoom
@@ -258,9 +141,9 @@ class InteractiveChartState extends State<InteractiveChart> {
               size: size,
               painter: ChartPainter(
                 params: params,
-                getTimeLabel: widget.timeLabel ?? defaultTimeLabel,
-                getPriceLabel: widget.priceLabel ?? defaultPriceLabel,
-                getOverlayInfo: widget.overlayInfo ?? defaultOverlayInfo,
+                getTimeLabel: defaultTimeLabel,
+                getPriceLabel: defaultPriceLabel,
+                getOverlayInfo: defaultOverlayInfo,
               ),
             ),
           ),
@@ -281,9 +164,11 @@ class InteractiveChartState extends State<InteractiveChart> {
         .clamp(_getMinCandleWidth(w), _getMaxCandleWidth(w));
     final clampedScale = candleWidth / _prevCandleWidth;
     var startOffset = _prevStartOffset * clampedScale;
+
     // Handle pan
     final dx = (focalPoint - _initialFocalPoint).dx * -1;
     startOffset += dx;
+
     // Adjust pan when zooming
     final prevCount = w / _prevCandleWidth;
     final currCount = w / candleWidth;
@@ -291,10 +176,7 @@ class InteractiveChartState extends State<InteractiveChart> {
     final focalPointFactor = focalPoint.dx / w;
     startOffset -= zoomAdjustment * focalPointFactor;
     startOffset = startOffset.clamp(0, _getMaxStartOffset(w, candleWidth));
-    // Fire candle width resize event
-    if (candleWidth != _candleWidth) {
-      widget.onCandleResize?.call(candleWidth);
-    }
+
     // Apply changes
     setState(() {
       _candleWidth = candleWidth;
@@ -321,7 +203,7 @@ class InteractiveChartState extends State<InteractiveChart> {
       // If data is shorter, we use the whole range.
       final count = min(
         widget.candles.length,
-        widget.initialVisibleCandleCount,
+        initialVisibleCandleCount,
       );
       _candleWidth = w / count;
       // Default show the latest available data, e.g. the most recent 90 days.
@@ -366,23 +248,12 @@ class InteractiveChartState extends State<InteractiveChart> {
         .format(DateTime.fromMillisecondsSinceEpoch(candle.timestamp));
     return {
       'Date': date,
-      'Open': candle.open?.toStringAsFixed(2) ?? '-',
-      'High': candle.high?.toStringAsFixed(2) ?? '-',
-      'Low': candle.low?.toStringAsFixed(2) ?? '-',
-      'Close': candle.close?.toStringAsFixed(2) ?? '-',
+      'Open': candle.open.toStringAsFixed(2),
+      'High': candle.high.toStringAsFixed(2),
+      'Low': candle.low.toStringAsFixed(2),
+      'Close': candle.close.toStringAsFixed(2),
       'Volume': candle.volume?.asAbbreviated() ?? '-',
     };
-  }
-
-  void _fireOnTapEvent() {
-    if (_prevParams == null || _tapPosition == null) {
-      return;
-    }
-    final params = _prevParams!;
-    final dx = _tapPosition!.dx;
-    final selected = params.getCandleIndexFromOffset(dx);
-    final candle = params.candles[selected];
-    widget.onTap?.call(candle);
   }
 }
 
