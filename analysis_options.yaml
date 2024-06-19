@@ -1,0 +1,25 @@
+# https://pub.dev/packages/pedantic_mono
+include: package:pedantic_mono/analysis_options.yaml
+
+# analyzer:
+#   exclude:
+#     - "**/*.g.dart" #build.yamlで対応済みのためコメントアウト
+#     - "**/*.freezed.dart" # Freezedは対応済みのためコメントアウト
+
+linter:
+  rules:
+    # メソッドの引数にbool引数を禁止
+    avoid_positional_boolean_parameters: false
+    # 対応するパラメータのデフォルトと一致する引数を渡すことを禁止
+    avoid_redundant_argument_values: false
+    # 可能な場合は、定義済みの const 値を使用します
+    use_named_constants: false
+    # 対応するダブルリテラルではなく、intリテラルを使用してください
+    prefer_int_literals: false
+    # 条件式でのブールリテラルは避けてください
+    avoid_bool_literals_in_conditional_expressions: false
+    # 1行の文字数は80文字まで
+    lines_longer_than_80_chars: false
+
+# Additional information about this file can be found at
+# https://dart.dev/guides/language/analysis-options

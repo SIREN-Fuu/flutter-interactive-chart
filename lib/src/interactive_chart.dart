@@ -10,6 +10,27 @@ import 'chart_style.dart';
 import 'painter_params.dart';
 
 class InteractiveChart extends StatefulWidget {
+  const InteractiveChart({
+    Key? key,
+    required this.candles,
+    this.initialVisibleCandleCount = 90,
+    ChartStyle? style,
+    this.timeLabel,
+    this.priceLabel,
+    this.overlayInfo,
+    this.onTap,
+    this.onCandleResize,
+  })  : style = style ?? const ChartStyle(),
+        assert(
+          candles.length >= 3,
+          'InteractiveChart requires 3 or more CandleData',
+        ),
+        assert(
+          initialVisibleCandleCount >= 3,
+          'initialVisibleCandleCount must be more 3 or more',
+        ),
+        super(key: key);
+
   /// The full list of [CandleData] to be used for this chart.
   ///
   /// It needs to have at least 3 data points. If data is sufficiently large,
@@ -60,28 +81,11 @@ class InteractiveChart extends StatefulWidget {
   /// This provides the width of a candlestick at the current zoom level.
   final ValueChanged<double>? onCandleResize;
 
-  const InteractiveChart({
-    Key? key,
-    required this.candles,
-    this.initialVisibleCandleCount = 90,
-    ChartStyle? style,
-    this.timeLabel,
-    this.priceLabel,
-    this.overlayInfo,
-    this.onTap,
-    this.onCandleResize,
-  })  : this.style = style ?? const ChartStyle(),
-        assert(candles.length >= 3,
-            "InteractiveChart requires 3 or more CandleData"),
-        assert(initialVisibleCandleCount >= 3,
-            "initialVisibleCandleCount must be more 3 or more"),
-        super(key: key);
-
   @override
-  _InteractiveChartState createState() => _InteractiveChartState();
+  InteractiveChartState createState() => InteractiveChartState();
 }
 
-class _InteractiveChartState extends State<InteractiveChart> {
+class InteractiveChartState extends State<InteractiveChart> {
   // The width of an individual bar in the chart.
   late double _candleWidth;
 
@@ -109,9 +113,9 @@ class _InteractiveChartState extends State<InteractiveChart> {
         _handleResize(w);
 
         // Find the visible data range
-        final int start = (_startOffset / _candleWidth).floor();
-        final int count = (w / _candleWidth).ceil();
-        final int end = (start + count).clamp(start, widget.candles.length);
+        final start = (_startOffset / _candleWidth).floor();
+        final count = (w / _candleWidth).ceil();
+        final end = (start + count).clamp(start, widget.candles.length);
         final candlesInRange = widget.candles.getRange(start, end).toList();
         if (end < widget.candles.length) {
           // Put in an extra item, since it can become visible when scrolling
@@ -135,14 +139,22 @@ class _InteractiveChartState extends State<InteractiveChart> {
 
         // Calculate min and max among the visible data
         double? highest(CandleData c) {
-          if (c.high != null) return c.high;
-          if (c.open != null && c.close != null) return max(c.open!, c.close!);
+          if (c.high != null) {
+            return c.high;
+          }
+          if (c.open != null && c.close != null) {
+            return max(c.open!, c.close!);
+          }
           return c.open ?? c.close;
         }
 
         double? lowest(CandleData c) {
-          if (c.low != null) return c.low;
-          if (c.open != null && c.close != null) return min(c.open!, c.close!);
+          if (c.low != null) {
+            return c.low;
+          }
+          if (c.open != null && c.close != null) {
+            return min(c.open!, c.close!);
+          }
           return c.open ?? c.close;
         }
 
@@ -159,40 +171,56 @@ class _InteractiveChartState extends State<InteractiveChart> {
             .whereType<double>()
             .fold(double.infinity, min);
 
-        final child = TweenAnimationBuilder(
-          tween: PainterParamsTween(
-            end: PainterParams(
-              candles: candlesInRange,
-              style: widget.style,
-              size: size,
-              candleWidth: _candleWidth,
-              startOffset: _startOffset,
-              maxPrice: maxPrice,
-              minPrice: minPrice,
-              maxVol: maxVol,
-              minVol: minVol,
-              xShift: xShift,
-              tapPosition: _tapPosition,
-              leadingTrends: leadingTrends,
-              trailingTrends: trailingTrends,
-            ),
-          ),
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-          builder: (_, PainterParams params, __) {
-            _prevParams = params;
-            return RepaintBoundary(
-              child: CustomPaint(
-                size: size,
-                painter: ChartPainter(
-                  params: params,
-                  getTimeLabel: widget.timeLabel ?? defaultTimeLabel,
-                  getPriceLabel: widget.priceLabel ?? defaultPriceLabel,
-                  getOverlayInfo: widget.overlayInfo ?? defaultOverlayInfo,
-                ),
-              ),
-            );
-          },
+        // final child = TweenAnimationBuilder(
+        //   tween: PainterParamsTween(
+        //     end: PainterParams(
+        //       candles: candlesInRange,
+        //       style: widget.style,
+        //       size: size,
+        //       candleWidth: _candleWidth,
+        //       startOffset: _startOffset,
+        //       maxPrice: maxPrice,
+        //       minPrice: minPrice,
+        //       maxVol: maxVol,
+        //       minVol: minVol,
+        //       xShift: xShift,
+        //       tapPosition: _tapPosition,
+        //       leadingTrends: leadingTrends,
+        //       trailingTrends: trailingTrends,
+        //     ),
+        //   ),
+        //   duration: Duration(milliseconds: 300),
+        //   curve: Curves.easeOut,
+        //   builder: (_, PainterParams params, __) {
+        //     _prevParams = params;
+        //     return RepaintBoundary(
+        //       child: CustomPaint(
+        //         size: size,
+        //         painter: ChartPainter(
+        //           params: params,
+        //           getTimeLabel: widget.timeLabel ?? defaultTimeLabel,
+        //           getPriceLabel: widget.priceLabel ?? defaultPriceLabel,
+        //           getOverlayInfo: widget.overlayInfo ?? defaultOverlayInfo,
+        //         ),
+        //       ),
+        //     );
+        //   },
+        // );
+
+        final params = PainterParams(
+          candles: candlesInRange,
+          style: widget.style,
+          size: size,
+          candleWidth: _candleWidth,
+          startOffset: _startOffset,
+          maxPrice: maxPrice,
+          minPrice: minPrice,
+          maxVol: maxVol,
+          minVol: minVol,
+          xShift: xShift,
+          tapPosition: _tapPosition,
+          leadingTrends: leadingTrends,
+          trailingTrends: trailingTrends,
         );
 
         return Listener(
@@ -217,27 +245,37 @@ class _InteractiveChartState extends State<InteractiveChart> {
             onTapCancel: () => setState(() => _tapPosition = null),
             onTapUp: (_) {
               // Fire callback event and reset _tapPosition
-              if (widget.onTap != null) _fireOnTapEvent();
+              if (widget.onTap != null) {
+                _fireOnTapEvent();
+              }
               setState(() => _tapPosition = null);
             },
             // Pan and zoom
             onScaleStart: (details) => _onScaleStart(details.localFocalPoint),
             onScaleUpdate: (details) =>
                 _onScaleUpdate(details.scale, details.localFocalPoint, w),
-            child: child,
+            child: CustomPaint(
+              size: size,
+              painter: ChartPainter(
+                params: params,
+                getTimeLabel: widget.timeLabel ?? defaultTimeLabel,
+                getPriceLabel: widget.priceLabel ?? defaultPriceLabel,
+                getOverlayInfo: widget.overlayInfo ?? defaultOverlayInfo,
+              ),
+            ),
           ),
         );
       },
     );
   }
 
-  _onScaleStart(Offset focalPoint) {
+  void _onScaleStart(Offset focalPoint) {
     _prevCandleWidth = _candleWidth;
     _prevStartOffset = _startOffset;
     _initialFocalPoint = focalPoint;
   }
 
-  _onScaleUpdate(double scale, Offset focalPoint, double w) {
+  void _onScaleUpdate(double scale, Offset focalPoint, double w) {
     // Handle zoom
     final candleWidth = (_prevCandleWidth * scale)
         .clamp(_getMinCandleWidth(w), _getMaxCandleWidth(w));
@@ -247,8 +285,8 @@ class _InteractiveChartState extends State<InteractiveChart> {
     final dx = (focalPoint - _initialFocalPoint).dx * -1;
     startOffset += dx;
     // Adjust pan when zooming
-    final double prevCount = w / _prevCandleWidth;
-    final double currCount = w / candleWidth;
+    final prevCount = w / _prevCandleWidth;
+    final currCount = w / candleWidth;
     final zoomAdjustment = (currCount - prevCount) * candleWidth;
     final focalPointFactor = focalPoint.dx / w;
     startOffset -= zoomAdjustment * focalPointFactor;
@@ -264,8 +302,10 @@ class _InteractiveChartState extends State<InteractiveChart> {
     });
   }
 
-  _handleResize(double w) {
-    if (w == _prevChartWidth) return;
+  void _handleResize(double w) {
+    if (w == _prevChartWidth) {
+      return;
+    }
     if (_prevChartWidth != null) {
       // Re-clamp when size changes (e.g. screen rotation)
       _candleWidth = _candleWidth.clamp(
@@ -306,16 +346,16 @@ class _InteractiveChartState extends State<InteractiveChart> {
   String defaultTimeLabel(int timestamp, int visibleDataCount) {
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp)
         .toIso8601String()
-        .split("T")
+        .split('T')
         .first
-        .split("-");
+        .split('-');
 
     if (visibleDataCount > 20) {
       // If more than 20 data points are visible, we should show year and month.
-      return "${date[0]}-${date[1]}"; // yyyy-mm
+      return '${date[0]}-${date[1]}'; // yyyy-mm
     } else {
       // Otherwise, we should show month and date.
-      return "${date[1]}-${date[2]}"; // mm-dd
+      return '${date[1]}-${date[2]}'; // mm-dd
     }
   }
 
@@ -325,17 +365,19 @@ class _InteractiveChartState extends State<InteractiveChart> {
     final date = intl.DateFormat.yMMMd()
         .format(DateTime.fromMillisecondsSinceEpoch(candle.timestamp));
     return {
-      "Date": date,
-      "Open": candle.open?.toStringAsFixed(2) ?? "-",
-      "High": candle.high?.toStringAsFixed(2) ?? "-",
-      "Low": candle.low?.toStringAsFixed(2) ?? "-",
-      "Close": candle.close?.toStringAsFixed(2) ?? "-",
-      "Volume": candle.volume?.asAbbreviated() ?? "-",
+      'Date': date,
+      'Open': candle.open?.toStringAsFixed(2) ?? '-',
+      'High': candle.high?.toStringAsFixed(2) ?? '-',
+      'Low': candle.low?.toStringAsFixed(2) ?? '-',
+      'Close': candle.close?.toStringAsFixed(2) ?? '-',
+      'Volume': candle.volume?.asAbbreviated() ?? '-',
     };
   }
 
   void _fireOnTapEvent() {
-    if (_prevParams == null || _tapPosition == null) return;
+    if (_prevParams == null || _tapPosition == null) {
+      return;
+    }
     final params = _prevParams!;
     final dx = _tapPosition!.dx;
     final selected = params.getCandleIndexFromOffset(dx);
@@ -346,16 +388,20 @@ class _InteractiveChartState extends State<InteractiveChart> {
 
 extension Formatting on double {
   String asPercent() {
-    final format = this < 100 ? "##0.00" : "#,###";
-    final v = intl.NumberFormat(format, "en_US").format(this);
+    final format = this < 100 ? '##0.00' : '#,###';
+    final v = intl.NumberFormat(format, 'en_US').format(this);
     return "${this >= 0 ? '+' : ''}$v%";
   }
 
   String asAbbreviated() {
-    if (this < 1000) return this.toStringAsFixed(3);
-    if (this >= 1e18) return this.toStringAsExponential(3);
-    final s = intl.NumberFormat("#,###", "en_US").format(this).split(",");
-    const suffixes = ["K", "M", "B", "T", "Q"];
-    return "${s[0]}.${s[1]}${suffixes[s.length - 2]}";
+    if (this < 1000) {
+      return toStringAsFixed(3);
+    }
+    if (this >= 1e18) {
+      return toStringAsExponential(3);
+    }
+    final s = intl.NumberFormat('#,###', 'en_US').format(this).split(',');
+    const suffixes = ['K', 'M', 'B', 'T', 'Q'];
+    return '${s[0]}.${s[1]}${suffixes[s.length - 2]}';
   }
 }

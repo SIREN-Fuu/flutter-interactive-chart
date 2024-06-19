@@ -10,17 +10,16 @@ typedef PriceLabelGetter = String Function(double price);
 typedef OverlayInfoGetter = Map<String, String> Function(CandleData candle);
 
 class ChartPainter extends CustomPainter {
-  final PainterParams params;
-  final TimeLabelGetter getTimeLabel;
-  final PriceLabelGetter getPriceLabel;
-  final OverlayInfoGetter getOverlayInfo;
-
   ChartPainter({
     required this.params,
     required this.getTimeLabel,
     required this.getPriceLabel,
     required this.getOverlayInfo,
   });
+  final PainterParams params;
+  final TimeLabelGetter getTimeLabel;
+  final PriceLabelGetter getPriceLabel;
+  final OverlayInfoGetter getOverlayInfo;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -29,15 +28,16 @@ class ChartPainter extends CustomPainter {
     _drawPriceGridAndLabels(canvas, params);
 
     // Draw prices, volumes & trend line
-    canvas.save();
-    canvas.clipRect(Offset.zero & Size(params.chartWidth, params.chartHeight));
-    // canvas.drawRect(
-    //   // apply yellow tint to clipped area (for debugging)
-    //   Offset.zero & Size(params.chartWidth, params.chartHeight),
-    //   Paint()..color = Colors.yellow[100]!,
-    // );
-    canvas.translate(params.xShift, 0);
-    for (int i = 0; i < params.candles.length; i++) {
+    canvas
+      ..save()
+      ..clipRect(Offset.zero & Size(params.chartWidth, params.chartHeight))
+      // canvas.drawRect(
+      //   // apply yellow tint to clipped area (for debugging)
+      //   Offset.zero & Size(params.chartWidth, params.chartHeight),
+      //   Paint()..color = Colors.yellow[100]!,
+      // );
+      ..translate(params.xShift, 0);
+    for (var i = 0; i < params.candles.length; i++) {
       _drawSingleDay(canvas, params, i);
     }
     canvas.restore();
@@ -50,12 +50,12 @@ class ChartPainter extends CustomPainter {
     }
   }
 
-  void _drawTimeLabels(canvas, PainterParams params) {
+  void _drawTimeLabels(Canvas canvas, PainterParams params) {
     // We draw one time label per 90 pixels of screen width
     final lineCount = params.chartWidth ~/ 90;
     final gap = 1 / (lineCount + 1);
-    for (int i = 1; i <= lineCount; i++) {
-      double x = i * gap * params.chartWidth;
+    for (var i = 1; i <= lineCount; i++) {
+      final x = i * gap * params.chartWidth;
       final index = params.getCandleIndexFromOffset(x);
       if (index < params.candles.length) {
         final candle = params.candles[index];
@@ -79,7 +79,7 @@ class ChartPainter extends CustomPainter {
     }
   }
 
-  void _drawPriceGridAndLabels(canvas, PainterParams params) {
+  void _drawPriceGridAndLabels(Canvas canvas, PainterParams params) {
     [0.0, 0.25, 0.5, 0.75, 1.0]
         .map((v) => ((params.maxPrice - params.minPrice) * v) + params.minPrice)
         .forEach((y) {
@@ -99,15 +99,16 @@ class ChartPainter extends CustomPainter {
         ..textDirection = TextDirection.ltr
         ..layout();
       priceTp.paint(
-          canvas,
-          Offset(
-            params.chartWidth + 4,
-            params.fitPrice(y) - priceTp.height / 2,
-          ));
+        canvas,
+        Offset(
+          params.chartWidth + 4,
+          params.fitPrice(y) - priceTp.height / 2,
+        ),
+      );
     });
   }
 
-  void _drawSingleDay(canvas, PainterParams params, int i) {
+  void _drawSingleDay(Canvas canvas, PainterParams params, int i) {
     final candle = params.candles[i];
     final x = i * params.candleWidth;
     final thickWidth = max(params.candleWidth * 0.8, 0.8);
@@ -150,15 +151,24 @@ class ChartPainter extends CustomPainter {
       );
     }
     // Draw trend line
-    for (int j = 0; j < candle.trends.length; j++) {
-      final trendLinePaint = params.style.trendLineStyles.at(j) ??
+    for (var lineCount = 0; lineCount < candle.trends.length; lineCount++) {
+      final trendLinePaint = params.style.trendLineStyles.at(lineCount) ??
           (Paint()
             ..strokeWidth = 2.0
             ..strokeCap = StrokeCap.round
             ..color = Colors.blue);
-
-      final pt = candle.trends.at(j); // current data point
-      final prevPt = params.candles.at(i - 1)?.trends.at(j);
+      if (lineCount == 0) {
+        trendLinePaint.color = Colors.blue;
+      }
+      if (lineCount == 1) {
+        trendLinePaint.color = Colors.red;
+      }
+      if (lineCount == 2) {
+        trendLinePaint.color = Colors.yellow;
+      }
+      final pt = candle.trends.at(lineCount); // current data point
+      final prevPt = params.candles.at(i - 1)?.trends.at(lineCount);
+      //debugPrint('i: $i, j: $j, pt: $pt, prevPt: $prevPt');
       if (pt != null && prevPt != null) {
         canvas.drawLine(
           Offset(x - params.candleWidth, params.fitPrice(prevPt)),
@@ -167,23 +177,25 @@ class ChartPainter extends CustomPainter {
         );
       }
       if (i == 0) {
-        // In the front, draw an extra line connecting to out-of-window data
-        if (pt != null && params.leadingTrends?.at(j) != null) {
+        // 前面に、ウィンドウ外のデータに接続する追加の線を描画します。
+        if (pt != null && params.leadingTrends?.at(lineCount) != null) {
           canvas.drawLine(
-            Offset(x - params.candleWidth,
-                params.fitPrice(params.leadingTrends!.at(j)!)),
+            Offset(
+              x - params.candleWidth,
+              params.fitPrice(params.leadingTrends!.at(lineCount)!),
+            ),
             Offset(x, params.fitPrice(pt)),
             trendLinePaint,
           );
         }
       } else if (i == params.candles.length - 1) {
-        // At the end, draw an extra line connecting to out-of-window data
-        if (pt != null && params.trailingTrends?.at(j) != null) {
+        // 最後に、ウィンドウ外のデータに接続する追加の線を描画します。
+        if (pt != null && params.trailingTrends?.at(lineCount) != null) {
           canvas.drawLine(
             Offset(x, params.fitPrice(pt)),
             Offset(
               x + params.candleWidth,
-              params.fitPrice(params.trailingTrends!.at(j)!),
+              params.fitPrice(params.trailingTrends!.at(lineCount)!),
             ),
             trendLinePaint,
           );
@@ -192,27 +204,33 @@ class ChartPainter extends CustomPainter {
     }
   }
 
-  void _drawTapHighlightAndOverlay(canvas, PainterParams params) {
+  void _drawTapHighlightAndOverlay(Canvas canvas, PainterParams params) {
     final pos = params.tapPosition!;
     final i = params.getCandleIndexFromOffset(pos.dx);
     final candle = params.candles[i];
-    canvas.save();
-    canvas.translate(params.xShift, 0.0);
-    // Draw highlight bar (selection box)
-    canvas.drawLine(
+    canvas
+      ..save()
+      ..translate(params.xShift, 0.0)
+      // Draw highlight bar (selection box)
+      ..drawLine(
         Offset(i * params.candleWidth, 0.0),
         Offset(i * params.candleWidth, params.chartHeight),
         Paint()
           ..strokeWidth = max(params.candleWidth * 0.88, 1.0)
-          ..color = params.style.selectionHighlightColor);
-    canvas.restore();
+          ..color = params.style.selectionHighlightColor,
+      )
+      ..restore();
     // Draw info pane
     _drawTapInfoOverlay(canvas, params, candle);
   }
 
-  void _drawTapInfoOverlay(canvas, PainterParams params, CandleData candle) {
-    final xGap = 8.0;
-    final yGap = 4.0;
+  void _drawTapInfoOverlay(
+    Canvas canvas,
+    PainterParams params,
+    CandleData candle,
+  ) {
+    const xGap = 8.0;
+    const yGap = 4.0;
 
     TextPainter makeTP(String text) => TextPainter(
           text: TextSpan(
@@ -224,9 +242,11 @@ class ChartPainter extends CustomPainter {
           ..layout();
 
     final info = getOverlayInfo(candle);
-    if (info.isEmpty) return;
-    final labels = info.keys.map((text) => makeTP(text)).toList();
-    final values = info.values.map((text) => makeTP(text)).toList();
+    if (info.isEmpty) {
+      return;
+    }
+    final labels = info.keys.map(makeTP).toList();
+    final values = info.values.map(makeTP).toList();
 
     final labelsMaxWidth = labels.map((tp) => tp.width).reduce(max);
     final valuesMaxWidth = values.map((tp) => tp.width).reduce(max);
@@ -240,9 +260,10 @@ class ChartPainter extends CustomPainter {
     // Shift the canvas, so the overlay panel can appear near touch position.
     canvas.save();
     final pos = params.tapPosition!;
-    final fingerSize = 32.0; // leave some margin around user's finger
-    double dx, dy;
-    assert(params.size.width >= panelWidth, "Overlay panel is too wide.");
+    const fingerSize = 32.0; // leave some margin around user's finger
+    double dx;
+    double dy;
+    assert(params.size.width >= panelWidth, 'Overlay panel is too wide.');
     if (pos.dx <= params.size.width / 2) {
       // If user touches the left-half of the screen,
       // we show the overlay panel near finger touch position, on the right.
@@ -253,20 +274,24 @@ class ChartPainter extends CustomPainter {
     }
     dx = dx.clamp(0, params.size.width - panelWidth);
     dy = pos.dy - panelHeight - fingerSize;
-    if (dy < 0) dy = 0.0;
-    canvas.translate(dx, dy);
+    if (dy < 0) {
+      dy = 0.0;
+    }
+    canvas
+      ..translate(dx, dy)
 
-    // Draw the background for overlay panel
-    canvas.drawRRect(
+      // Draw the background for overlay panel
+      ..drawRRect(
         RRect.fromRectAndRadius(
           Offset.zero & Size(panelWidth, panelHeight),
-          Radius.circular(8),
+          const Radius.circular(8),
         ),
-        Paint()..color = params.style.overlayBackgroundColor);
+        Paint()..color = params.style.overlayBackgroundColor,
+      );
 
     // Draw texts
     var y = 0.0;
-    for (int i = 0; i < labels.length; i++) {
+    for (var i = 0; i < labels.length; i++) {
       y += yGap;
       final rowHeight = max(labels[i].height, values[i].height);
       // Draw labels (left align, vertical center)
@@ -293,7 +318,9 @@ class ChartPainter extends CustomPainter {
 
 extension ElementAtOrNull<E> on List<E> {
   E? at(int index) {
-    if (index < 0 || index >= length) return null;
+    if (index < 0 || index >= length) {
+      return null;
+    }
     return elementAt(index);
   }
 }

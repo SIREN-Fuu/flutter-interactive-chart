@@ -1,6 +1,31 @@
 import 'package:flutter/material.dart';
 
 class ChartStyle {
+  const ChartStyle({
+    this.volumeHeightFactor = 0.2,
+    this.priceLabelWidth = 48.0,
+    this.timeLabelHeight = 24.0,
+    this.timeLabelStyle = const TextStyle(
+      fontSize: 16,
+      color: Colors.grey,
+    ),
+    this.priceLabelStyle = const TextStyle(
+      fontSize: 12,
+      color: Colors.grey,
+    ),
+    this.overlayTextStyle = const TextStyle(
+      fontSize: 16,
+      color: Colors.white,
+    ),
+    this.priceGainColor = Colors.green,
+    this.priceLossColor = Colors.red,
+    this.volumeColor = Colors.grey,
+    this.trendLineStyles = const [],
+    this.priceGridLineColor = Colors.grey,
+    this.selectionHighlightColor = const Color(0x33757575),
+    this.overlayBackgroundColor = const Color(0xEE757575),
+  });
+
   /// The percentage height of volume.
   ///
   /// Defaults to 0.2, which means volume bars will be 20% of total height,
@@ -53,29 +78,4 @@ class ChartStyle {
   ///
   /// This appears when user clicks on the chart.
   final Color overlayBackgroundColor;
-
-  const ChartStyle({
-    this.volumeHeightFactor = 0.2,
-    this.priceLabelWidth = 48.0,
-    this.timeLabelHeight = 24.0,
-    this.timeLabelStyle = const TextStyle(
-      fontSize: 16,
-      color: Colors.grey,
-    ),
-    this.priceLabelStyle = const TextStyle(
-      fontSize: 12,
-      color: Colors.grey,
-    ),
-    this.overlayTextStyle = const TextStyle(
-      fontSize: 16,
-      color: Colors.white,
-    ),
-    this.priceGainColor = Colors.green,
-    this.priceLossColor = Colors.red,
-    this.volumeColor = Colors.grey,
-    this.trendLineStyles = const [],
-    this.priceGridLineColor = Colors.grey,
-    this.selectionHighlightColor = const Color(0x33757575),
-    this.overlayBackgroundColor = const Color(0xEE757575),
-  });
 }
